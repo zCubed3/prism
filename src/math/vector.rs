@@ -35,7 +35,7 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
 
     pub fn normalize(&self) -> Self {
         let s = self.sum();
-        return self / s;
+        return *self / s;
     }
 
     pub fn cross(&self, rhs : Self) -> Self {
@@ -119,4 +119,58 @@ impl<T: VectorComponent, const COUNT: usize> Display for Vector<T, COUNT> {
 //
 // Component Math Traits
 //
-impl<T: VectorComponent, const COUNT: usize> Div for Vector<T, COUNT> {
+impl<T: VectorComponent, const COUNT: usize> Add<T> for Vector<T, COUNT> {
+    type Output = Self;
+
+    fn add(self, rhs: T) -> Self::Output {
+        let mut d = self;
+
+        for c in 0 .. COUNT {
+            d[c] += rhs;
+        }
+
+        d
+    }
+}
+
+impl<T: VectorComponent, const COUNT: usize> Sub<T> for Vector<T, COUNT> {
+    type Output = Self;
+
+    fn sub(self, rhs: T) -> Self::Output {
+        let mut d = self;
+
+        for c in 0 .. COUNT {
+            d[c] -= rhs;
+        }
+
+        d
+    }
+}
+
+impl<T: VectorComponent, const COUNT: usize> Mul<T> for Vector<T, COUNT> {
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        let mut d = self;
+
+        for c in 0 .. COUNT {
+            d[c] *= rhs;
+        }
+
+        d
+    }
+}
+
+impl<T: VectorComponent, const COUNT: usize> Div<T> for Vector<T, COUNT> {
+    type Output = Self;
+
+    fn div(self, rhs: T) -> Self::Output {
+        let mut d = self;
+
+        for c in 0 .. COUNT {
+            d[c] /= rhs;
+        }
+
+        d
+    }
+}
