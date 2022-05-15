@@ -249,3 +249,116 @@ impl<T: VectorComponent, const COUNT: usize> PartialEq for Vector<T, COUNT> {
         true
     }
 }
+
+// By default into operators aren't implemented, but there is a macro for that!
+// Use vector_into_vector!() to implement it for other vector types!
+#[macro_export]
+macro_rules! vector_into_vector {
+    ($from_count:literal, $into_count:literal, $t:ty) => {
+        impl Into<Vector<$t, $into_count>> for Vector<$t, $from_count> {
+            fn into(self) -> Vector<$t, $into_count> {
+                let mut o = Vector::<$t, $into_count>::default();
+
+                for c in 0 .. min($into_count, $from_count) {
+                    o[c] = self[c];
+                }
+
+                o
+            }
+        }
+    };
+}
+
+//
+// VectorComponents for float types
+//
+impl VectorComponent for f32 {}
+impl SqrtDelegate for f32 {
+    fn sqrt_delegate(&self) -> Self {
+        self.sqrt()
+    }
+}
+
+impl VectorComponent for f64 {}
+impl SqrtDelegate for f64 {
+    fn sqrt_delegate(&self) -> Self {
+        self.sqrt()
+    }
+}
+
+//
+// Common vector types
+//
+pub mod common {
+    use super::*;
+
+    //
+    // Vector2
+    //
+    pub type Vector2F32 = Vector<f32, 2>;
+    pub type Vector2 = Vector2F32;
+    pub type Vec2 = Vector2;
+    pub type Vector2D = Vector2;
+    pub type Vec2D = Vector2;
+
+    pub type Vector2F64 = Vector<f64, 2>;
+    pub type HiVector2 = Vector2F64;
+    pub type HiVec2 = HiVector2;
+    pub type HiVector2D = HiVector2;
+    pub type HiVec2D = HiVector2;
+
+    //
+    // Vector3
+    //
+    pub type Vector3F32 = Vector<f32, 3>;
+    pub type Vector3 = Vector3F32;
+    pub type Vec3 = Vector3;
+    pub type Vector3D = Vector3;
+    pub type Vec3D = Vector3;
+
+    pub type Vector3F64 = Vector<f64, 3>;
+    pub type HiVector3 = Vector3F64;
+    pub type HiVec3 = Vector3;
+    pub type HiVector3D = Vector3;
+    pub type HiVec3D = Vector3;
+
+    //
+    // Vector4
+    //
+    pub type Vector4F32 = Vector<f32, 4>;
+    pub type Vector4 = Vector4F32;
+    pub type Vec4 = Vector4;
+    pub type Vector4D = Vector4;
+    pub type Vec4D = Vector4;
+
+    pub type Vector4F64 = Vector<f32, 4>;
+    pub type HiVector4 = Vector4F64;
+    pub type HiVec4 = HiVector4;
+    pub type HiVector4D = HiVector4;
+    pub type HiVec4D = HiVector4;
+
+    //
+    // Common cast implementations
+    //
+
+    // Vector2
+    vector_into_vector!(2, 3, f32);
+    vector_into_vector!(2, 3, f64);
+
+    vector_into_vector!(2, 4, f32);
+    vector_into_vector!(2, 4, f64);
+
+    // Vector3
+    vector_into_vector!(3, 4, f32);
+    vector_into_vector!(3, 4, f64);
+
+    vector_into_vector!(3, 2, f32);
+    vector_into_vector!(3, 2, f64);
+
+    // Vector4
+    vector_into_vector!(4, 3, f32);
+    vector_into_vector!(4, 3, f64);
+
+    vector_into_vector!(4, 2, f32);
+    vector_into_vector!(4, 2, f64);
+}

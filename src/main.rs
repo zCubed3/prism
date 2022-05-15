@@ -1,15 +1,17 @@
 mod tests;
 mod math;
+mod perf;
 
-use math::vector3::*;
+use math::vector::common::*;
 use math::ray::*;
-use crate::math::vector::Vector;
 
 const RT_WIDTH: usize = 64;
 const RT_HEIGHT: usize = 32;
 const RT_ORTHO_SIZE: f32 = 1f32;
 
 fn main() {
+    let _prog_time = perf::scoped_stopwatch::ScopedStopwatch::new_begin("RUN".to_string());
+
     // Simple Triangle intersection test
     let p1 = Vector3::from_array([-0.5f32, -0.5f32, 0f32]);
     let p2 = Vector3::from_array([0.5f32, -0.5f32, 0f32]);
