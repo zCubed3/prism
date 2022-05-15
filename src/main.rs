@@ -1,18 +1,12 @@
+mod tests;
 mod math;
 
 use math::vector3::*;
 
 fn main() {
-    let mut v1 = Vector3::default();
-    let mut v2 = Vector3::default();
-    let mut v3 = Vector3::default();
-
-    v1[0] = 1f32;
-
-    v2[1] = 1f32;
-
-    v3[0] = 1f32;
-    v3[1] = 1f32;
+    let v1 = Vector3::from_array([1f32, 0f32, 0f32]);
+    let v2 = Vector3::from_array([0f32, 1f32, 0f32]);
+    let v3 = Vector3::from_array([0.5f32, 1f32, 1f32]);
 
     let c = v1.cross(v2);
 

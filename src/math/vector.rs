@@ -1,11 +1,24 @@
+#![allow(unused)]
+#![allow(dead_code)]
+
 use std::ops::*;
-use std::fmt::{Debug, Display, Formatter};
+use std::cmp::*;
+use std::fmt::*;
+
+//
+// Delegations
+//
+pub trait SqrtDelegate {
+    fn sqrt_delegate(&self) -> Self;
+}
 
 // Trait for acceptable VectorElements
 // https://www.worthe-it.co.za/blog/2017-01-15-aliasing-traits-in-rust.html
 pub trait VectorComponent:
     Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> +
     AddAssign + SubAssign + MulAssign + DivAssign +
+    PartialEq +
+    SqrtDelegate +
     Clone + Copy + Default + Display
     where Self: Sized {
 
@@ -13,16 +26,25 @@ pub trait VectorComponent:
 
 // By default VectorComponent isn't implemented! We've implemented it for floating point types inside of component_impls.rs!
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Vector<T: VectorComponent, const COUNT: usize> {
     pub data: [T; COUNT],
 }
 
 // Subtypes can declare a better "new" constructor
 impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
-    pub fn from_arr(d: [T; COUNT]) -> Vector<T, COUNT> {
+    // TODO: Can rust generate a constructor?
+    // Like "pub fn new(c1, c2, c3, c4)" ?
+
+    pub fn from_array(d: [T; COUNT]) -> Vector<T, COUNT> {
         Vector { data: d }
     }
 
+    pub fn from_single(d: T) -> Vector<T, COUNT> {
+        Vector { data: [d; COUNT] }
+    }
+
+    // Sum != Magnitude!
     pub fn sum(&self) -> T {
         let mut sum = T::default();
 
@@ -30,12 +52,16 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
             sum += *x
         });
 
-        return sum;
+        sum
+    }
+
+    // Magnitude != Sum!
+    pub fn magnitude(&self) -> T {
+        self.dot(*self).sqrt_delegate()
     }
 
     pub fn normalize(&self) -> Self {
-        let s = self.sum();
-        return *self / s;
+        return *self / self.magnitude();
     }
 
     pub fn cross(&self, rhs : Self) -> Self {
@@ -52,6 +78,16 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
         } else {
             panic!("Cross products are only supported for 3 dimensional vectors! (Your vector has {} components!)", COUNT);
         }
+    }
+
+    pub fn dot(&self, rhs : Self) -> T {
+        let mut d = T::default();
+
+        for c in 0 .. COUNT {
+            d += self[c] * rhs[c];
+        }
+
+        d
     }
 }
 
@@ -97,20 +133,34 @@ impl<T: VectorComponent, const COUNT: usize> IndexMut<usize> for Vector<T, COUNT
 //
 // Formatting Traits
 //
+impl<T: VectorComponent, const COUNT: usize> Debug for Vector<T, COUNT> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Vector<{}, {}> {{\n", std::any::type_name::<T>(), COUNT).expect("Failed to write!");
+
+        for c in 0 .. COUNT {
+            write!(f, "\t[{}] = {}\n", c, self[c]).expect("Failed to write!");
+        }
+
+        write!(f, "}}").expect("Failed to write!");
+
+        Ok(())
+    }
+}
+
 impl<T: VectorComponent, const COUNT: usize> Display for Vector<T, COUNT> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<");
+        write!(f, "<").expect("Failed to write!");
 
         let mut first = true;
         for c in self.data {
             if !first {
-                write!(f, ", ");
+                write!(f, ", ").expect("Failed to write!");
             }
 
-            write!(f, "{c}");
+            write!(f, "{c}").expect("Failed to write!");
             first = false;
         }
-        write!(f, ">");
+        write!(f, ">").expect("Failed to write!");
 
         Ok(())
     }
@@ -119,58 +169,83 @@ impl<T: VectorComponent, const COUNT: usize> Display for Vector<T, COUNT> {
 //
 // Component Math Traits
 //
-impl<T: VectorComponent, const COUNT: usize> Add<T> for Vector<T, COUNT> {
-    type Output = Self;
-
-    fn add(self, rhs: T) -> Self::Output {
-        let mut d = self;
-
-        for c in 0 .. COUNT {
-            d[c] += rhs;
+macro_rules! component_op_assign {
+    ($op:ident, $func:ident, $call:tt) => {
+        impl<T: VectorComponent, const COUNT: usize> $op<T> for Vector<T, COUNT> {
+            fn $func(&mut self, rhs: T) {
+                for c in 0 .. COUNT {
+                    self[c] $call rhs;
+                }
+            }
         }
-
-        d
-    }
+    };
 }
 
-impl<T: VectorComponent, const COUNT: usize> Sub<T> for Vector<T, COUNT> {
-    type Output = Self;
+macro_rules! component_op {
+    ($op:ident, $func:ident, $call:tt) => {
+        impl<T: VectorComponent, const COUNT: usize> $op<T> for Vector<T, COUNT> {
+            type Output = Self;
 
-    fn sub(self, rhs: T) -> Self::Output {
-        let mut d = self;
+            fn $func(self, rhs: T) -> Self::Output {
+                let mut prod = self;
 
-        for c in 0 .. COUNT {
-            d[c] -= rhs;
+                for c in 0 .. COUNT {
+                    prod[c] $call rhs;
+                }
+
+                prod
+            }
         }
-
-        d
-    }
+    };
 }
 
-impl<T: VectorComponent, const COUNT: usize> Mul<T> for Vector<T, COUNT> {
-    type Output = Self;
+component_op_assign!(AddAssign, add_assign, +=);
+component_op_assign!(SubAssign, sub_assign, -=);
+component_op_assign!(MulAssign, mul_assign, *=);
+component_op_assign!(DivAssign, div_assign, /=);
 
-    fn mul(self, rhs: T) -> Self::Output {
-        let mut d = self;
+component_op!(Add, add, +=);
+component_op!(Sub, sub, -=);
+component_op!(Mul, mul, *=);
+component_op!(Div, div, /=);
 
-        for c in 0 .. COUNT {
-            d[c] *= rhs;
+//
+// Vector math traits
+//
+macro_rules! vector_op {
+    ($op:ident, $func:ident, $call:tt) => {
+        impl<T: VectorComponent, const COUNT: usize> $op<Vector<T, COUNT>> for Vector<T, COUNT> {
+            type Output = Self;
+
+            fn $func(self, rhs: Self) -> Self::Output {
+                let mut prod = self;
+
+                for c in 0 .. COUNT {
+                    prod[c] $call rhs[c];
+                }
+
+                prod
+            }
         }
-
-        d
-    }
+    };
 }
 
-impl<T: VectorComponent, const COUNT: usize> Div<T> for Vector<T, COUNT> {
-    type Output = Self;
+vector_op!(Add, add, +=);
+vector_op!(Sub, sub, -=);
+vector_op!(Mul, mul, *=);
+vector_op!(Div, div, /=);
 
-    fn div(self, rhs: T) -> Self::Output {
-        let mut d = self;
-
+//
+// Vector Comparison Traits
+//
+impl<T: VectorComponent, const COUNT: usize> PartialEq for Vector<T, COUNT> {
+    fn eq(&self, other: &Self) -> bool {
         for c in 0 .. COUNT {
-            d[c] /= rhs;
+            if self[c] != other[c] {
+                return false;
+            }
         }
 
-        d
+        true
     }
 }
