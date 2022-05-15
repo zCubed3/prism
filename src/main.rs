@@ -2,11 +2,13 @@ mod tests;
 mod math;
 mod perf;
 
+use std::io::Write;
+use std::time;
 use math::vector::common::*;
 use math::ray::*;
 
-const RT_WIDTH: usize = 64;
-const RT_HEIGHT: usize = 32;
+const RT_WIDTH: usize = 80;
+const RT_HEIGHT: usize = 40;
 const RT_ORTHO_SIZE: f32 = 1f32;
 
 fn sphere_sdf(s: Vector3, r: f32) -> f32 {
@@ -22,8 +24,8 @@ fn donut_sdf(s: Vector3, (r1, r2) : (f32, f32)) -> f32 {
 }
 
 fn scene_sdf(s: Vector3) -> f32 {
-    sphere_sdf(s, 0.5f32)
-    //donut_sdf(Vector3::from_array([s[0], s[2], s[1]]), (0.5, 0.1))
+    //sphere_sdf(s, 0.5f32)
+    donut_sdf(Vector3::from_array([s[0], s[2], s[1]]), (0.5, 0.1))
 }
 
 fn normal_sdf(s: Vector3) -> Vector3 {
@@ -47,62 +49,87 @@ fn normal_sdf(s: Vector3) -> Vector3 {
 fn main() {
     let ascii_map = ".:-=+*#%@";
 
-    let _prog_time = perf::scoped_stopwatch::ScopedStopwatch::new_begin("SDF".to_string());
+    let mut last_instant = time::Instant::now();
+    let mut time: f32 = 0f32;
 
-    let offset = Vector3::from_array([0f32, 0f32, -1f32]);
+    // Shitty blanking system
+    for _ in 0 .. 256 {
+        println!("                                                            ")
+    }
 
-    for y in 0 .. RT_HEIGHT + 1 {
-        let v = y as f32 / RT_HEIGHT as f32;
+    loop {
+        let mut offset = Vector3::default();
 
-        let persp_y = -((v - 0.5f32) * 2f32);
-        //let ortho_y = v * RT_ORTHO_SIZE;
+        offset[0] = time.cos();
+        //offset[1] = time.cos();
+        offset *= 0.5f32;
 
-        for x in 0 .. RT_WIDTH + 1 {
-            let u = (x as f32 / RT_WIDTH as f32);
+        offset[2] -= time.sin().abs() + 0.15f32;
 
-            let persp_x = (u - 0.5f32) * 2f32;
-            //let ortho_x = u * RT_ORTHO_SIZE;
+        print!("\x1b[0;0H");
+        std::io::stdout().flush();
 
-            //let origin = Vector3::from_array([ortho_x, ortho_y, 0f32]) + offset;
-            let origin = offset;
+        let _sdf_time = perf::scoped_stopwatch::ScopedStopwatch::new_begin("SDF".to_string());
+        for y in 0..RT_HEIGHT + 1 {
+            let v = y as f32 / RT_HEIGHT as f32;
 
-            //let direction = Vector3::from_array([0f32, 0f32, 1f32]).normalize();
-            let direction = Vector3::from_array([persp_x, persp_y, 1f32]).normalize();
+            let persp_y = -((v - 0.5f32) * 2f32);
+            //let ortho_y = v * RT_ORTHO_SIZE;
 
-            let mut intersect = false;
-            let mut i = 0.0f32;
+            for x in 0..RT_WIDTH + 1 {
+                let u = (x as f32 / RT_WIDTH as f32);
 
-            let mut t = 0.0;
-            while t < 10.0 {
-                let s = origin + direction * t;
+                let persp_x = (u - 0.5f32) * 2f32;
+                //let ortho_x = u * RT_ORTHO_SIZE;
 
-                let r = scene_sdf(s);
+                //let origin = Vector3::from_array([ortho_x, ortho_y, 0f32]) + offset;
+                let origin = offset;
 
-                if r < 0.001f32 {
-                    let n = normal_sdf(s).normalize();
+                //let direction = Vector3::from_array([0f32, 0f32, 1f32]).normalize();
+                let direction = Vector3::from_array([persp_x, persp_y, 1f32]).normalize();
 
-                    i = n.dot(Vector3::from_array([1f32, 1f32, -1f32]).normalize());
-                    //i = (1f32 - (n.dot(direction).max(0f32))).powf(1f32);
+                let mut intersect = false;
+                let mut i = 0.0f32;
 
-                    intersect = true;
-                    break;
+                let mut t = 0.0;
+                while t < 10.0 {
+                    let s = origin + direction * t;
+
+                    let r = scene_sdf(s);
+
+                    if r < 0.001f32 {
+                        let n = normal_sdf(s).normalize();
+
+                        i = n.dot(Vector3::from_array([time.sin(), time.cos(), -1f32]).normalize());
+
+                        let v = (s - origin).normalize();
+                        i = (n.dot(v).max(0f32));
+
+                        intersect = true;
+                        break;
+                    }
+
+                    t += r;
                 }
 
-                t += r;
+                if intersect {
+                    let m = (ascii_map.len() - 1) as f32;
+                    let c = (i.min(1.0).max(0.0) * m).ceil() as usize;
+
+                    //print!("{} ", c);
+                    print!("{}", ascii_map.chars().nth(c).unwrap());
+                } else {
+                    print!(" ");
+                }
             }
 
-            if intersect {
-                let m = (ascii_map.len() - 1) as f32;
-                let c = (i.min(1.0).max(0.0) * m).ceil() as usize;
-
-                //print!("{} ", c);
-                print!("{}", ascii_map.chars().nth(c).unwrap());
-            } else {
-                print!(" ");
-            }
+            println!();
         }
 
-        println!();
+        let now = time::Instant::now();
+        time += (now - last_instant).as_secs_f32();
+
+        last_instant = now;
     }
 }
 
