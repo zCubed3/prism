@@ -6,13 +6,13 @@ use std::cmp::*;
 use std::fmt::*;
 
 //
-// Delegations
+// Delegations (allows us to verify components can work!)
 //
 pub trait SqrtDelegate {
     fn sqrt_delegate(&self) -> Self;
 }
 
-// Trait for acceptable VectorElements
+// Constraint for acceptable VectorElements
 // https://www.worthe-it.co.za/blog/2017-01-15-aliasing-traits-in-rust.html
 pub trait VectorComponent:
     Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> +
@@ -25,6 +25,7 @@ pub trait VectorComponent:
 
 }
 
+// A Vector is a type with a strict requirement for components, it is a wrapper around a slice!
 // By default VectorComponent isn't implemented! We've implemented it for floating point types inside of component_impls.rs!
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -32,11 +33,8 @@ pub struct Vector<T: VectorComponent, const COUNT: usize> {
     pub data: [T; COUNT],
 }
 
-// Subtypes can declare a better "new" constructor
+// Subtypes can declare a better "new" function
 impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
-    // TODO: Can rust generate a constructor?
-    // Like "pub fn new(c1, c2, c3, c4)" ?
-
     pub fn from_array(d: [T; COUNT]) -> Self {
         Vector { data: d }
     }
@@ -49,14 +47,14 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
     pub fn sum(&self) -> T {
         let mut sum = T::default();
 
-        self.data.iter().for_each(|x| {
+        self.iter().for_each(|x| {
             sum += *x
         });
 
         sum
     }
 
-    // Magnitude != Sum!
+    // Remember: Magnitude != Sum!
     pub fn magnitude(&self) -> T {
         self.dot(*self).sqrt_delegate()
     }
@@ -66,7 +64,7 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
     }
 
     pub fn normalize(&self) -> Self {
-        return *self / self.magnitude();
+        *self / self.magnitude()
     }
 
     pub fn cross(&self, rhs : Self) -> Self {
@@ -97,41 +95,28 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
 }
 
 //
-// Traits
-//
-
-//
-// Default Trait
+// Default
 //
 impl<T: VectorComponent, const COUNT: usize> Default for Vector<T, COUNT> {
     fn default() -> Self {
-        let d: [T; COUNT] = [T::default(); COUNT];
-        Self { data: d }
+        Self { data: [T::default(); COUNT] }
     }
 }
 
 //
-// Indexing Traits
+// Deref
 //
-impl<T: VectorComponent, const COUNT: usize> Index<usize> for Vector<T, COUNT> {
-    type Output = T;
+impl<T: VectorComponent, const COUNT: usize> Deref for Vector<T, COUNT> {
+    type Target = [T; COUNT];
 
-    fn index(&self, index: usize) -> &Self::Output {
-        return if index < self.data.len() {
-            &self.data[index]
-        } else {
-            panic!("Index out of range!")
-        }
+    fn deref(&self) -> &Self::Target {
+        &self.data
     }
 }
 
-impl<T: VectorComponent, const COUNT: usize> IndexMut<usize> for Vector<T, COUNT> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        return if index < self.data.len() {
-            &mut self.data[index]
-        } else {
-            panic!("Index out of range!")
-        }
+impl<T: VectorComponent, const COUNT: usize> DerefMut for Vector<T, COUNT> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
     }
 }
 
@@ -370,7 +355,7 @@ pub mod common {
     pub type Vector4D = Vector4;
     pub type Vec4D = Vector4;
 
-    pub type Vector4F64 = Vector<f32, 4>;
+    pub type Vector4F64 = Vector<f64, 4>;
     pub type HiVector4 = Vector4F64;
     pub type HiVec4 = HiVector4;
     pub type HiVector4D = HiVector4;
@@ -382,22 +367,65 @@ pub mod common {
 
     // Vector2
     vector_from_vector!(2, 3, f32);
-    vector_from_vector!(2, 3, f64);
-
     vector_from_vector!(2, 4, f32);
+
+    vector_from_vector!(2, 3, f64);
     vector_from_vector!(2, 4, f64);
 
     // Vector3
+    vector_from_vector!(3, 2, f32);
     vector_from_vector!(3, 4, f32);
+
+    vector_from_vector!(3, 2, f64);
     vector_from_vector!(3, 4, f64);
 
-    vector_from_vector!(3, 2, f32);
-    vector_from_vector!(3, 2, f64);
-
     // Vector4
+    vector_from_vector!(4, 2, f32);
     vector_from_vector!(4, 3, f32);
+
+    vector_from_vector!(4, 2, f64);
     vector_from_vector!(4, 3, f64);
 
-    vector_from_vector!(4, 2, f32);
-    vector_from_vector!(4, 2, f64);
+    //
+    // Additional implementations
+    //
+
+    // Vector2
+    impl Vector2 {
+        pub fn new(x: f32, y: f32) -> Self {
+            Self::from_array([x, y])
+        }
+    }
+
+    impl HiVector2 {
+        pub fn new(x: f64, y: f64) -> Self {
+            Self::from_array([x, y])
+        }
+    }
+
+    // Vector3
+    impl Vector3 {
+        pub fn new(x: f32, y: f32, z: f32) -> Self {
+            Self::from_array([x, y, z])
+        }
+    }
+
+    impl HiVector3 {
+        pub fn new(x: f64, y: f64, z: f64) -> Self {
+            Self::from_array([x, y, z])
+        }
+    }
+
+    // Vector4
+    impl Vector4 {
+        pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+            Self::from_array([x, y, z, w])
+        }
+    }
+
+    impl HiVector4 {
+        pub fn new(x: f64, y: f64, z: f64, w: f64) -> Self {
+            Self::from_array([x, y, w, z])
+        }
+    }
 }
