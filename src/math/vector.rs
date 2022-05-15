@@ -17,6 +17,7 @@ pub trait SqrtDelegate {
 pub trait VectorComponent:
     Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> +
     AddAssign + SubAssign + MulAssign + DivAssign +
+    Neg<Output=Self> +
     PartialEq +
     SqrtDelegate +
     Clone + Copy + Default + Display
@@ -58,6 +59,10 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
     // Magnitude != Sum!
     pub fn magnitude(&self) -> T {
         self.dot(*self).sqrt_delegate()
+    }
+
+    pub fn length(&self) -> T {
+        self.magnitude()
     }
 
     pub fn normalize(&self) -> Self {
@@ -212,9 +217,21 @@ component_op!(Div, div, /=);
 //
 // Vector math traits
 //
+macro_rules! vector_op_assign {
+    ($op:ident, $func:ident, $call:tt) => {
+        impl<T: VectorComponent, const COUNT: usize> $op<Self> for Vector<T, COUNT> {
+            fn $func(&mut self, rhs: Self) {
+                for c in 0 .. COUNT {
+                    self[c] $call rhs[c];
+                }
+            }
+        }
+    };
+}
+
 macro_rules! vector_op {
     ($op:ident, $func:ident, $call:tt) => {
-        impl<T: VectorComponent, const COUNT: usize> $op<Vector<T, COUNT>> for Vector<T, COUNT> {
+        impl<T: VectorComponent, const COUNT: usize> $op<Self> for Vector<T, COUNT> {
             type Output = Self;
 
             fn $func(self, rhs: Self) -> Self::Output {
@@ -230,13 +247,35 @@ macro_rules! vector_op {
     };
 }
 
+vector_op_assign!(AddAssign, add_assign, +=);
+vector_op_assign!(SubAssign, sub_assign, -=);
+vector_op_assign!(MulAssign, mul_assign, *=);
+vector_op_assign!(DivAssign, div_assign, /=);
+
 vector_op!(Add, add, +=);
 vector_op!(Sub, sub, -=);
 vector_op!(Mul, mul, *=);
 vector_op!(Div, div, /=);
 
 //
-// Vector Comparison Traits
+// Vector negation
+//
+impl<T: VectorComponent, const COUNT: usize> Neg for Vector<T, COUNT> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        let mut d = self.clone();
+
+        for c in 0 .. COUNT {
+            d[c] = -d[c];
+        }
+
+        d
+    }
+}
+
+//
+// Vector comparison
 //
 impl<T: VectorComponent, const COUNT: usize> PartialEq for Vector<T, COUNT> {
     fn eq(&self, other: &Self) -> bool {
