@@ -253,14 +253,14 @@ impl<T: VectorComponent, const COUNT: usize> PartialEq for Vector<T, COUNT> {
 // By default into operators aren't implemented, but there is a macro for that!
 // Use vector_into_vector!() to implement it for other vector types!
 #[macro_export]
-macro_rules! vector_into_vector {
+macro_rules! vector_from_vector {
     ($from_count:literal, $into_count:literal, $t:ty) => {
-        impl Into<Vector<$t, $into_count>> for Vector<$t, $from_count> {
-            fn into(self) -> Vector<$t, $into_count> {
+        impl From<Vector<$t, $from_count>> for Vector<$t, $into_count> {
+            fn from(rhs: Vector<$t, $from_count>) -> Self {
                 let mut o = Vector::<$t, $into_count>::default();
 
                 for c in 0 .. min($into_count, $from_count) {
-                    o[c] = self[c];
+                    o[c] = rhs[c];
                 }
 
                 o
@@ -342,23 +342,23 @@ pub mod common {
     //
 
     // Vector2
-    vector_into_vector!(2, 3, f32);
-    vector_into_vector!(2, 3, f64);
+    vector_from_vector!(2, 3, f32);
+    vector_from_vector!(2, 3, f64);
 
-    vector_into_vector!(2, 4, f32);
-    vector_into_vector!(2, 4, f64);
+    vector_from_vector!(2, 4, f32);
+    vector_from_vector!(2, 4, f64);
 
     // Vector3
-    vector_into_vector!(3, 4, f32);
-    vector_into_vector!(3, 4, f64);
+    vector_from_vector!(3, 4, f32);
+    vector_from_vector!(3, 4, f64);
 
-    vector_into_vector!(3, 2, f32);
-    vector_into_vector!(3, 2, f64);
+    vector_from_vector!(3, 2, f32);
+    vector_from_vector!(3, 2, f64);
 
     // Vector4
-    vector_into_vector!(4, 3, f32);
-    vector_into_vector!(4, 3, f64);
+    vector_from_vector!(4, 3, f32);
+    vector_from_vector!(4, 3, f64);
 
-    vector_into_vector!(4, 2, f32);
-    vector_into_vector!(4, 2, f64);
+    vector_from_vector!(4, 2, f32);
+    vector_from_vector!(4, 2, f64);
 }
