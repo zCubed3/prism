@@ -14,6 +14,10 @@ pub struct Ray3D {
 const EPSILON : f32 = 0.0000001f32;
 
 impl Ray3D {
+    pub fn new(origin: Vector3, direction: Vector3) -> Self {
+        Self { origin, direction }
+    }
+
     pub fn intersect_triangle(self, (p1, p2, p3) : (Vector3, Vector3, Vector3)) -> Option<(f32, f32, f32)> {
         let e1 = p2 - p1;
         let e2 = p3 - p1;

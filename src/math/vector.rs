@@ -36,11 +36,11 @@ impl<T: VectorComponent, const COUNT: usize> Vector<T, COUNT> {
     // TODO: Can rust generate a constructor?
     // Like "pub fn new(c1, c2, c3, c4)" ?
 
-    pub fn from_array(d: [T; COUNT]) -> Vector<T, COUNT> {
+    pub fn from_array(d: [T; COUNT]) -> Self {
         Vector { data: d }
     }
 
-    pub fn from_single(d: T) -> Vector<T, COUNT> {
+    pub fn from_single(d: T) -> Self {
         Vector { data: [d; COUNT] }
     }
 
