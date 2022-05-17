@@ -62,6 +62,17 @@ impl<T: Component, const COUNT: usize> Vector<T, COUNT> {
 
         d
     }
+
+    /// Returns a copy of this [Vector] with each component set to their absolute value
+    pub fn abs(&self) -> Self {
+        let mut a = *self;
+
+        for mut v in *a {
+            v = v.abs_delegate();
+        }
+
+        a
+    }
 }
 
 //

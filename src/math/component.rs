@@ -6,28 +6,15 @@ use std::fmt::*;
 // Delegations (allows us to verify components can work!)
 //
 
-/// Required trait for vector components!
-///
-/// Because of [Vector::magnitude()], it is necessary to get the square root of the component
-/// If your component type can't provide a square root it won't be usable!
-///
-/// This trait is already implemented for [f32] and [f64]
-pub trait SqrtDelegate {
+/// Required trait for components!
+pub trait MathDelegate {
     fn sqrt_delegate(&self) -> Self;
-}
 
-/// Required trait for matrix components!
-///
-/// Because of [Matrix::identity()], it is necessary to get 0 and 1 of the given component type!
-pub trait GetOne {
-    fn get_one() -> Self;
-}
-
-/// Required trait for matrix components!
-///
-/// Because of [Matrix4x4::perspective()], it is necessary to get the tangent of a given component type
-pub trait TanDelegate {
+    fn sin_delegate(&self) -> Self;
+    fn cos_delegate(&self) -> Self;
     fn tan_delegate(&self) -> Self;
+
+    fn abs_delegate(&self) -> Self;
 }
 
 /// Required trait for operations requiring conversions!
@@ -36,6 +23,8 @@ pub trait Constants {
     fn deg_to_rad() -> Self;
 
     fn pi() -> Self;
+
+    fn get_one() -> Self;
 }
 
 
@@ -48,7 +37,7 @@ Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> +
 AddAssign + SubAssign + MulAssign + DivAssign +
 Neg<Output=Self> +
 PartialEq +
-SqrtDelegate + GetOne + TanDelegate + Constants +
+MathDelegate + Constants +
 Clone + Copy + Default + Display
     where Self: Sized {
 
@@ -61,21 +50,25 @@ Clone + Copy + Default + Display
 // F32
 impl Component for f32 {}
 
-impl SqrtDelegate for f32 {
+impl MathDelegate for f32 {
     fn sqrt_delegate(&self) -> Self {
         self.sqrt()
     }
-}
-
-impl GetOne for f32 {
-    fn get_one() -> Self {
-        1f32
+    
+    fn sin_delegate(&self) -> Self {
+        self.sin()
     }
-}
 
-impl TanDelegate for f32 {
+    fn cos_delegate(&self) -> Self {
+        self.cos()
+    }
+
     fn tan_delegate(&self) -> Self {
         self.tan()
+    }
+
+    fn abs_delegate(&self) -> Self {
+        self.abs()
     }
 }
 
@@ -91,26 +84,34 @@ impl Constants for f32 {
     fn pi() -> Self {
         std::f32::consts::PI
     }
+
+    fn get_one() -> Self {
+        1f32
+    }
 }
 
 // F64
 impl Component for f64 {}
 
-impl SqrtDelegate for f64 {
+impl MathDelegate for f64 {
     fn sqrt_delegate(&self) -> Self {
         self.sqrt()
     }
-}
 
-impl GetOne for f64 {
-    fn get_one() -> Self {
-        1f64
+    fn sin_delegate(&self) -> Self {
+        self.sin()
     }
-}
 
-impl TanDelegate for f64 {
+    fn cos_delegate(&self) -> Self {
+        self.cos()
+    }
+
     fn tan_delegate(&self) -> Self {
         self.tan()
+    }
+
+    fn abs_delegate(&self) -> Self {
+        self.abs()
     }
 }
 
@@ -125,5 +126,9 @@ impl Constants for f64 {
 
     fn pi() -> Self {
         std::f64::consts::PI
+    }
+
+    fn get_one() -> Self {
+        1f64
     }
 }

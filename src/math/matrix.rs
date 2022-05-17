@@ -6,6 +6,7 @@ use super::component::Component;
 use std::ops::*;
 use std::cmp::*;
 use std::fmt::*;
+use crate::math::vector::Vector;
 
 /// [Matrix] and [Vector] are very closely related!
 /// Because of this, [Matrix] provides behavior to work with [Vector] types!
@@ -158,6 +159,30 @@ component_op!(Sub, sub, -=);
 component_op!(Mul, mul, *=);
 component_op!(Div, div, /=);
 
+// Matrix * Matrix
+impl<T: Component, const WIDTH: usize, const HEIGHT: usize> Mul<Self> for Matrix<T, WIDTH, HEIGHT> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mut m = Self::default();
+
+        for y in 0 .. HEIGHT {
+            let r = Vector::from_array(self[y]);
+            for x in 0 .. WIDTH {
+                let mut c = Vector::<T, WIDTH>::default();
+
+                for y2 in 0 .. HEIGHT {
+                    c[y2] = rhs[y2][x];
+                }
+
+                m[y][x] = (r * c).sum();
+            }
+        }
+
+        m
+    }
+}
+
 //
 // Common matrix types
 //
@@ -167,6 +192,7 @@ component_op!(Div, div, /=);
 /// Implementations of Matrix inverse are from https://github.com/g-truc/glm/blob/master/glm/detail/func_matrix.inl
 pub mod common {
     use crate::math::vector::Vector;
+    use crate::{Vector3, Vector4};
     use super::*;
 
     /// Matrix 2x2
@@ -286,25 +312,89 @@ pub mod common {
             i * d
         }
 
-        pub fn perspective(fov_y: T, near_cull: T, far_cull: T, aspect: T) -> Self {
-            let zero = T::default();
-            let one: T = T::get_one();
-            let two: T = one + one;
+        pub fn perspective(fov_y: T, aspect: T, z_near: T, z_far: T) -> Self {
+            let one = T::get_one();
+            let two = one + one;
 
-            let rad: T = (fov_y / two) * T::deg_to_rad();
-
-            let y_scale = one / rad.tan_delegate();
-            let x_scale = y_scale / aspect;
-            let comp = near_cull - far_cull;
+            let half_fov = (fov_y / two);
 
             let mut m = Self::default();
 
-            m[0] = [x_scale, zero, zero, zero];
-            m[1] = [zero, y_scale, zero, zero];
-            m[2] = [zero, zero, (far_cull + near_cull) / comp, -one];
-            m[3] = [zero, zero, two * far_cull * near_cull / comp, zero];
+            m[0][0] = one / (aspect * half_fov);
+            m[1][1] = one / (half_fov);
+            m[2][2] = -(z_far + z_near) / (z_far - z_near);
+            m[2][3] = -one;
+            m[3][2] = -(two * z_far * z_near) / (z_far - z_near);
 
             m
+        }
+
+        pub fn translate(translation: Vector<T, 3>) -> Self {
+            let mut m = Self::identity();
+
+            m[2] = [translation[0], translation[1], translation[2], T::get_one()];
+
+            m
+        }
+
+        pub fn rotate_x(rotation: T) -> Self {
+            let mut m = Self::identity();
+
+            m[1] = [T::default(), rotation.cos_delegate(), -rotation.sin_delegate(), T::default()];
+            m[2] = [T::default(), rotation.sin_delegate(), rotation.cos_delegate(), T::default()];
+
+            m
+        }
+
+        pub fn rotate_y(rotation: T) -> Self {
+            let mut m = Self::identity();
+
+            m[0] = [rotation.cos_delegate(), T::default(), rotation.sin_delegate(), T::default()];
+            m[2] = [-rotation.sin_delegate(), T::default(), rotation.cos_delegate(), T::default()];
+
+            m
+        }
+
+        pub fn rotate_z(rotation: T) -> Self {
+            let mut m = Self::identity();
+
+            m[0] = [rotation.cos_delegate(), -rotation.sin_delegate(), T::default(), T::default()];
+            m[1] = [rotation.sin_delegate(), rotation.cos_delegate(), T::default(), T::default()];
+
+            m
+        }
+
+        pub fn rotation(euler: Vector<T, 3>) -> Self {
+            Self::rotate_x(euler[0]) * Self::rotate_y(euler[1]) * Self::rotate_z(euler[2])
+        }
+
+        pub fn look_at(direction: Vector<T, 3>) -> Self {
+            let up = Vector::<T, 3>::new(T::default(), -T::get_one(), T::default());
+
+            let r_right = direction.cross(up).normalize();
+            let r_up = direction.cross(r_right).normalize();
+
+            let mut m = Self::identity();
+
+            m[0] = [r_right[0], r_right[1], r_right[2], T::default()];
+            m[1] = [r_up[0], r_up[1], r_up[2], T::default()];
+            m[2] = [direction[0], direction[1], direction[2], T::default()];
+
+            m
+        }
+    }
+
+    /// From: https://github.com/g-truc/glm/blob/master/glm/detail/type_mat4x4.inl
+    impl<T: Component> Mul<Vector<T, 4>> for Matrix<T, 4, 4> {
+        type Output = Vector<T, 4>;
+
+        fn mul(self, rhs: Vector<T, 4>) -> Self::Output {
+            Vector::<T, 4>::new(
+                rhs[0] * self[0][0] + rhs[1] * self[0][1] + rhs[2] * self[0][2] + rhs[3] * self[0][3],
+                rhs[0] * self[1][0] + rhs[1] * self[1][1] + rhs[2] * self[1][2] + rhs[3] * self[1][3],
+                rhs[0] * self[2][0] + rhs[1] * self[2][1] + rhs[2] * self[2][2] + rhs[3] * self[2][3],
+                rhs[0] * self[3][0] + rhs[1] * self[3][1] + rhs[2] * self[3][2] + rhs[3] * self[3][3]
+            )
         }
     }
 }
