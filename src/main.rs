@@ -1,7 +1,9 @@
 mod math;
 mod perf;
+mod rendering;
 
 use math::vector::common::*;
+use math::matrix::common::*;
 use math::ray::*;
 
 const RT_WIDTH: usize = 64;
@@ -10,6 +12,10 @@ const RT_ORTHO_SIZE: f32 = 1f32;
 
 // RT main
 fn main() {
+    let mut mat = Matrix4x4::perspective(60f32, 0.01f32, 100f32, 1f32);
+
+    println!("m1:\n{}\nm2:\n{}", mat, mat.inverse());
+
     let _prog_time = perf::scoped_stopwatch::ScopedStopwatch::new_begin("RUN".to_string());
 
     // Simple Triangle intersection test

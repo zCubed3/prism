@@ -1,39 +1,11 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
+use super::component::Component;
+
 use std::ops::*;
 use std::cmp::*;
 use std::fmt::*;
-
-//
-// Delegations (allows us to verify components can work!)
-//
-
-/// Required trait for vector components!
-///
-/// Because of [Vector::magnitude()], it is necessary to get the square root of the component
-/// If your component type can't provide a square root it won't be usable!
-///
-/// This trait is already implemented for [f32] and [f64]
-pub trait SqrtDelegate {
-    fn sqrt_delegate(&self) -> Self;
-}
-
-
-// https://www.worthe-it.co.za/blog/2017-01-15-aliasing-traits-in-rust.html
-/// Strict trait for constraining what types can be used as vector components
-///
-/// This trait is already implemented for [f32] and [f64]
-pub trait VectorComponent:
-    Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> +
-    AddAssign + SubAssign + MulAssign + DivAssign +
-    Neg<Output=Self> +
-    PartialEq +
-    SqrtDelegate +
-    Clone + Copy + Default + Display
-    where Self: Sized {
-
-}
 
 ///
 /// Configurable vector type for usage with Vector math
@@ -43,25 +15,25 @@ pub trait VectorComponent:
 ///
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Vector<TComponent: VectorComponent, const COUNT: usize> {
+pub struct Vector<T: Component, const COUNT: usize> {
     /// The underlying array of the vector, the vector dereferences into this array
-    pub data: [TComponent; COUNT],
+    pub data: [T; COUNT],
 }
 
-impl<TComponent: VectorComponent, const COUNT: usize> Vector<TComponent, COUNT> {
+impl<T: Component, const COUNT: usize> Vector<T, COUNT> {
     /// Creates a new [Vector] by copying the given array into the backing array
-    pub fn from_array(array: [TComponent; COUNT]) -> Self {
+    pub fn from_array(array: [T; COUNT]) -> Self {
         Vector { data: array }
     }
 
     /// Creates a new [Vector] by copying the provided value into each element
-    pub fn from_single(value: TComponent) -> Self {
+    pub fn from_single(value: T) -> Self {
         Vector { data: [value; COUNT] }
     }
 
     /// Returns the sum of all [VectorComponent]'s within this [Vector]
-    pub fn sum(&self) -> TComponent {
-        let mut sum = TComponent::default();
+    pub fn sum(&self) -> T {
+        let mut sum = T::default();
 
         self.iter().for_each(|x| {
             sum += *x
@@ -71,7 +43,7 @@ impl<TComponent: VectorComponent, const COUNT: usize> Vector<TComponent, COUNT> 
     }
 
     /// The length of this [Vector], not to be confused with [Vector::sum]!
-    pub fn magnitude(&self) -> TComponent {
+    pub fn magnitude(&self) -> T {
         self.dot(*self).sqrt_delegate()
     }
 
@@ -81,8 +53,8 @@ impl<TComponent: VectorComponent, const COUNT: usize> Vector<TComponent, COUNT> 
     }
 
     /// Returns the dot product of this [Vector] and another
-    pub fn dot(&self, rhs : Self) -> TComponent {
-        let mut d = TComponent::default();
+    pub fn dot(&self, rhs : Self) -> T {
+        let mut d = T::default();
 
         for c in 0 .. COUNT {
             d += self[c] * rhs[c];
@@ -95,9 +67,9 @@ impl<TComponent: VectorComponent, const COUNT: usize> Vector<TComponent, COUNT> 
 //
 // Default
 //
-impl<TComponent: VectorComponent, const COUNT: usize> Default for Vector<TComponent, COUNT> {
+impl<T: Component, const COUNT: usize> Default for Vector<T, COUNT> {
     fn default() -> Self {
-        Self { data: [TComponent::default(); COUNT] }
+        Self { data: [T::default(); COUNT] }
     }
 }
 
@@ -105,15 +77,15 @@ impl<TComponent: VectorComponent, const COUNT: usize> Default for Vector<TCompon
 // Deref
 //
 /// Deref to allow the Vector to be treated as its underlying backing array
-impl<TComponent: VectorComponent, const COUNT: usize> Deref for Vector<TComponent, COUNT> {
-    type Target = [TComponent; COUNT];
+impl<T: Component, const COUNT: usize> Deref for Vector<T, COUNT> {
+    type Target = [T; COUNT];
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-impl<TComponent: VectorComponent, const COUNT: usize> DerefMut for Vector<TComponent, COUNT> {
+impl<T: Component, const COUNT: usize> DerefMut for Vector<T, COUNT> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
@@ -122,12 +94,12 @@ impl<TComponent: VectorComponent, const COUNT: usize> DerefMut for Vector<TCompo
 //
 // Formatting Traits
 //
-impl<TComponent: VectorComponent, const COUNT: usize> Debug for Vector<TComponent, COUNT> {
+impl<T: Component, const COUNT: usize> Debug for Vector<T, COUNT> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Vector<{}, {}> {{\n", std::any::type_name::<TComponent>(), COUNT).expect("Failed to write!");
+        write!(f, "Vector<{}, {}> {{\n", std::any::type_name::<T>(), COUNT).expect("Failed to write!");
 
         for c in 0 .. COUNT {
-            write!(f, "\t[{}] = {}\n", c, self[c]).expect("Failed to write!");
+            writeln!(f, "\t[{}] = {}", c, self[c]).expect("Failed to write!");
         }
 
         write!(f, "}}").expect("Failed to write!");
@@ -136,7 +108,7 @@ impl<TComponent: VectorComponent, const COUNT: usize> Debug for Vector<TComponen
     }
 }
 
-impl<TComponent: VectorComponent, const COUNT: usize> Display for Vector<TComponent, COUNT> {
+impl<T: Component, const COUNT: usize> Display for Vector<T, COUNT> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "<").expect("Failed to write!");
 
@@ -160,8 +132,8 @@ impl<TComponent: VectorComponent, const COUNT: usize> Display for Vector<TCompon
 //
 macro_rules! component_op_assign {
     ($op:ident, $func:ident, $call:tt) => {
-        impl<TComponent: VectorComponent, const COUNT: usize> $op<TComponent> for Vector<TComponent, COUNT> {
-            fn $func(&mut self, rhs: TComponent) {
+        impl<T: Component, const COUNT: usize> $op<T> for Vector<T, COUNT> {
+            fn $func(&mut self, rhs: T) {
                 for c in 0 .. COUNT {
                     self[c] $call rhs;
                 }
@@ -172,10 +144,10 @@ macro_rules! component_op_assign {
 
 macro_rules! component_op {
     ($op:ident, $func:ident, $call:tt) => {
-        impl<TComponent: VectorComponent, const COUNT: usize> $op<TComponent> for Vector<TComponent, COUNT> {
+        impl<T: Component, const COUNT: usize> $op<T> for Vector<T, COUNT> {
             type Output = Self;
 
-            fn $func(self, rhs: TComponent) -> Self::Output {
+            fn $func(self, rhs: T) -> Self::Output {
                 let mut prod = self;
 
                 for c in 0 .. COUNT {
@@ -203,7 +175,7 @@ component_op!(Div, div, /=);
 //
 macro_rules! vector_op_assign {
     ($op:ident, $func:ident, $call:tt) => {
-        impl<TComponent: VectorComponent, const COUNT: usize> $op<Self> for Vector<TComponent, COUNT> {
+        impl<T: Component, const COUNT: usize> $op<Self> for Vector<T, COUNT> {
             fn $func(&mut self, rhs: Self) {
                 for c in 0 .. COUNT {
                     self[c] $call rhs[c];
@@ -215,7 +187,7 @@ macro_rules! vector_op_assign {
 
 macro_rules! vector_op {
     ($op:ident, $func:ident, $call:tt) => {
-        impl<TComponent: VectorComponent, const COUNT: usize> $op<Self> for Vector<TComponent, COUNT> {
+        impl<T: Component, const COUNT: usize> $op<Self> for Vector<T, COUNT> {
             type Output = Self;
 
             fn $func(self, rhs: Self) -> Self::Output {
@@ -244,7 +216,7 @@ vector_op!(Div, div, /=);
 //
 // Vector negation
 //
-impl<TComponent: VectorComponent, const COUNT: usize> Neg for Vector<TComponent, COUNT> {
+impl<T: Component, const COUNT: usize> Neg for Vector<T, COUNT> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -261,7 +233,7 @@ impl<TComponent: VectorComponent, const COUNT: usize> Neg for Vector<TComponent,
 //
 // Vector comparison
 //
-impl<TComponent: VectorComponent, const COUNT: usize> PartialEq for Vector<TComponent, COUNT> {
+impl<T: Component, const COUNT: usize> PartialEq for Vector<T, COUNT> {
     fn eq(&self, other: &Self) -> bool {
         for c in 0 .. COUNT {
             if self[c] != other[c] {
@@ -279,10 +251,10 @@ impl<TComponent: VectorComponent, const COUNT: usize> PartialEq for Vector<TComp
 
 /// Macro to provide a [From] implementation for casting this [Vector] into another [Vector]
 macro_rules! vector_from_vector {
-    ($from_count:literal, $into_count:literal, $t:ty) => {
-        impl From<Vector<$t, $from_count>> for Vector<$t, $into_count> {
-            fn from(rhs: Vector<$t, $from_count>) -> Self {
-                let mut o = Vector::<$t, $into_count>::default();
+    ($from_count:literal, $into_count:literal) => {
+        impl<T: Component> From<Vector<T, $from_count>> for Vector<T, $into_count> {
+            fn from(rhs: Vector<T, $from_count>) -> Self {
+                let mut o = Vector::<T, $into_count>::default();
 
                 for c in 0 .. min($into_count, $from_count) {
                     o[c] = rhs[c];
@@ -295,48 +267,31 @@ macro_rules! vector_from_vector {
 }
 
 //
-// VectorComponents for float types
-//
-impl VectorComponent for f32 {}
-impl SqrtDelegate for f32 {
-    fn sqrt_delegate(&self) -> Self {
-        self.sqrt()
-    }
-}
-
-impl VectorComponent for f64 {}
-impl SqrtDelegate for f64 {
-    fn sqrt_delegate(&self) -> Self {
-        self.sqrt()
-    }
-}
-
-//
 // Common vector types
 //
 
-/// Contains commonly used Vector types with additional implementations for ease of use
+/// Contains commonly used [Vector] aliases with additional implementations for ease of use
 pub mod common {
     use super::*;
 
-    /// 2 Dimensional Vector
+    /// 2D Vector
     pub type Vector2 = Vector<f32, 2>;
-    vector_from_vector!(2, 3, f32);
-    vector_from_vector!(2, 4, f32);
+    vector_from_vector!(2, 3);
+    vector_from_vector!(2, 4);
 
-    impl Vector2 {
-        pub fn new(x: f32, y: f32) -> Self {
+    impl<T: Component> Vector<T, 2> {
+        pub fn new(x: T, y: T) -> Self {
             Self::from_array([x, y])
         }
     }
 
-    /// 3 Dimensional Vector
+    /// 3D Vector
     pub type Vector3 = Vector<f32, 3>;
-    vector_from_vector!(3, 2, f32);
-    vector_from_vector!(3, 4, f32);
+    vector_from_vector!(3, 2);
+    vector_from_vector!(3, 4);
 
-    impl Vector3 {
-        pub fn new(x: f32, y: f32, z: f32) -> Self {
+    impl<T: Component> Vector<T, 3> {
+        pub fn new(x: T, y: T, z: T) -> Self {
             Self::from_array([x, y, z])
         }
 
@@ -351,14 +306,21 @@ pub mod common {
         }
     }
 
-    /// 4 Dimensional Vector
+    /// 4D Vector (same type as [Quaternion])
     pub type Vector4 = Vector<f32, 4>;
-    vector_from_vector!(4, 2, f32);
-    vector_from_vector!(4, 3, f32);
+    vector_from_vector!(4, 2);
+    vector_from_vector!(4, 3);
 
-    impl Vector4 {
-        pub fn new(x: f32, y: f32, z: f32, w: f32) -> Self {
+    impl<T: Component> Vector<T, 4> {
+        pub fn new(x: T, y: T, z: T, w: T) -> Self {
             Self::from_array([x, y, z, w])
         }
+    }
+
+    /// Quaternion (same type as [Vector4])
+    pub type Quaternion = Vector4;
+
+    impl Quaternion {
+
     }
 }
