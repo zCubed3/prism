@@ -278,7 +278,6 @@ impl<TComponent: VectorComponent, const COUNT: usize> PartialEq for Vector<TComp
 //
 
 /// Macro to provide a [From] implementation for casting this [Vector] into another [Vector]
-#[macro_export]
 macro_rules! vector_from_vector {
     ($from_count:literal, $into_count:literal, $t:ty) => {
         impl From<Vector<$t, $from_count>> for Vector<$t, $into_count> {
@@ -341,7 +340,8 @@ pub mod common {
             Self::from_array([x, y, z])
         }
 
-        /// Returns the cross product of the this [Vector] and another, only works for 3 dimensional [Vector] types!
+        /// Returns the cross product of the this [Vector] and another
+        /// *Only implemented for 3 dimensional vectors due to cross product being 3D specific!*
         pub fn cross(&self, rhs : Self) -> Self {
             Self::from_array([
                 self[1] * rhs[2] - self[2] * rhs[1],
