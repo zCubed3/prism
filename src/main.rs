@@ -9,8 +9,8 @@ use math::ray::*;
 
 use std::time;
 
-const RT_WIDTH: usize = 96;
-const RT_HEIGHT: usize = 48;
+const RT_WIDTH: usize = 32;
+const RT_HEIGHT: usize = 16;
 const RT_ORTHO_SIZE: f32 = 1f32;
 
 fn sphere_sdf(p: Vector3, r: f32) -> f32 {
@@ -69,7 +69,10 @@ fn main() {
         offset[2] -= 0.6f32;
 
         //let mat_v = Matrix4x4::rotation(Vector3::new(time.cos() * 0.1f32, time.sin(), 0f32) * 0.5f32);
-        let mat_v = Matrix4x4::look_at(-offset.normalize());
+        let mat_v = Matrix4x4::rotate_x(0f32);
+        let mat_p = Matrix4x4::perspective(60f32.to_radians(), 1.0f32, 0.1f32, 1000f32);
+
+        let mat_vp = mat_p * mat_v;
 
         print!("\x1b[0;0H");
         std::io::stdout().flush();
@@ -92,12 +95,9 @@ fn main() {
 
                 //let direction = Vector3::from_array([0f32, 0f32, 1f32]).normalize();
                 //let direction = Vector3::from_array([persp_x, persp_y, 1f32]).normalize();
-                let mat_p = Matrix4x4::perspective(90f32.to_radians(), 1.0f32, 0.1f32, 10f32);
-                let mat_vp = mat_p * mat_v;
 
                 let ray = mat_vp * Vector4::new(persp_x, persp_y, -1f32, 0f32);
-                let mut direction = Vector3::from(ray);
-                direction = direction.normalize();
+                let direction = Vector3::from(ray).normalize();
 
                 let mut intersect = false;
                 let mut i = 0.0f32;

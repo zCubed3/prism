@@ -29,6 +29,6 @@ impl ScopedStopwatch {
 
 impl Drop for ScopedStopwatch {
     fn drop(&mut self) {
-        println!("{} took {}s", self.id, (time::Instant::now() - self.start.unwrap()).as_secs_f32());
+        println!("STOPWATCH: {} took {} seconds", self.id, (time::Instant::now() - self.start.unwrap()).as_secs_f32());
     }
 }
