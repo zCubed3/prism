@@ -4,7 +4,8 @@
 //
 // 3D Ray type backed by Vector<f32, 3> aka Vector3
 //
-use crate::Vector3;
+
+use crate::math::vector::common::Vector3;
 
 pub struct Ray3D {
     pub origin: Vector3,

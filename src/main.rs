@@ -1,4 +1,3 @@
-mod tests;
 mod math;
 mod perf;
 

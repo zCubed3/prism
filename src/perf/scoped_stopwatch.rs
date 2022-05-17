@@ -20,8 +20,10 @@ impl ScopedStopwatch {
 
     pub fn new_begin(id: String) -> Self {
         let mut s = Self::new(id);
+
         s.begin();
-        return s;
+
+        s
     }
 }
 
