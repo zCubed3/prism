@@ -9,8 +9,8 @@ use math::ray::*;
 
 use std::time;
 
-const RT_WIDTH: usize = 32;
-const RT_HEIGHT: usize = 16;
+const RT_WIDTH: usize = 64;
+const RT_HEIGHT: usize = 32;
 const RT_ORTHO_SIZE: f32 = 1f32;
 
 fn sphere_sdf(p: Vector3, r: f32) -> f32 {
@@ -26,7 +26,7 @@ fn donut_sdf(p: Vector3, (r1, r2) : (f32, f32)) -> f32 {
 }
 
 fn scene_sdf(s: Vector3) -> f32 {
-    //sphere_sdf(s, 0.2f32)
+    //sphere_sdf(s, 0.4f32)
     donut_sdf(Vector3::from_array([s[0], s[2], s[1]]), (0.5, 0.1))
 }
 
@@ -64,15 +64,16 @@ fn main() {
     loop {
         let mut offset = Vector3::default();
 
-        offset[0] = time.sin() * 0.5f32;
-        offset[1] = time.cos() * 0.1f32;
-        offset[2] -= 0.6f32;
+        offset[0] = time.sin() * 30f32;
+        offset[1] = time.cos() * 30f32;
+        offset[2] = 20f32;
 
-        //let mat_v = Matrix4x4::rotation(Vector3::new(time.cos() * 0.1f32, time.sin(), 0f32) * 0.5f32);
-        let mat_v = Matrix4x4::rotate_x(0f32);
-        let mat_p = Matrix4x4::perspective(60f32.to_radians(), 1.0f32, 0.1f32, 1000f32);
+        //let mat_v = Matrix4x4::look_at(offset.normalize());
+        let mat_v = Matrix4x4::rotate_x(time.sin() * 0.01f32) * Matrix4x4::translate(offset);
+        let mat_p = Matrix4x4::perspective(30f32.to_radians(), 1.0f32, 0.1f32, 100f32);
 
         let mat_vp = mat_p * mat_v;
+        let mat_vp_i = mat_vp.inverse();
 
         print!("\x1b[0;0H");
         std::io::stdout().flush();
@@ -91,12 +92,14 @@ fn main() {
                 //let ortho_x = u * RT_ORTHO_SIZE;
 
                 //let origin = Vector3::from_array([ortho_x, ortho_y, 0f32]) + offset;
-                let origin = offset;
+                let origin = Vector3::from(mat_v * Vector4::new(0f32, 0f32, 0f32, 1f32));
 
                 //let direction = Vector3::from_array([0f32, 0f32, 1f32]).normalize();
                 //let direction = Vector3::from_array([persp_x, persp_y, 1f32]).normalize();
 
-                let ray = mat_vp * Vector4::new(persp_x, persp_y, -1f32, 0f32);
+                let mut ray = mat_vp_i * Vector4::new(persp_x, persp_y, 0f32, 1f32);
+                ray /= ray[3];
+
                 let direction = Vector3::from(ray).normalize();
 
                 let mut intersect = false;
@@ -111,10 +114,14 @@ fn main() {
                     if r < 0.001f32 {
                         let n = normal_sdf(s).normalize();
 
-                        i = n.dot(Vector3::from_array([time.sin(), time.cos(), -1f32]).normalize());
-
+                        let l = Vector3::new(1f32, 1f32, -1f32).normalize();
                         let v = (s - origin).normalize();
-                        i = (1f32 - (n.dot(v).max(0f32))).powf(3f32);
+
+                        let h = (l + v).normalize();
+
+                        //i = n.dot(l);
+                        i = n.dot(v).max(0f32);
+                        //i = n.dot(h).max(0f32).powf(1f32);
 
                         intersect = true;
                         break;
@@ -123,7 +130,7 @@ fn main() {
                     t += r;
                 }
 
-                if intersect && ray[3] > 0f32 {
+                if intersect {
                     let m = (ascii_map.len() - 1) as f32;
                     let c = (i.min(1.0).max(0.0) * m).ceil() as usize;
 

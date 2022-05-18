@@ -384,6 +384,7 @@ pub mod common {
         }
     }
 
+    /// Matrix * Vector
     /// From: https://github.com/g-truc/glm/blob/master/glm/detail/type_mat4x4.inl
     impl<T: Component> Mul<Vector<T, 4>> for Matrix<T, 4, 4> {
         type Output = Vector<T, 4>;
@@ -394,6 +395,21 @@ pub mod common {
                 rhs[0] * self[1][0] + rhs[1] * self[1][1] + rhs[2] * self[1][2] + rhs[3] * self[1][3],
                 rhs[0] * self[2][0] + rhs[1] * self[2][1] + rhs[2] * self[2][2] + rhs[3] * self[2][3],
                 rhs[0] * self[3][0] + rhs[1] * self[3][1] + rhs[2] * self[3][2] + rhs[3] * self[3][3]
+            )
+        }
+    }
+
+    /// Vector * Matrix
+    /// From: https://github.com/g-truc/glm/blob/master/glm/detail/type_mat4x4.inl
+    impl<T: Component> Mul<Matrix<T, 4, 4>> for Vector<T, 4> {
+        type Output = Self;
+
+        fn mul(self, rhs: Matrix<T, 4, 4>) -> Self::Output {
+            Vector::<T, 4>::new(
+                self[0] * rhs[0][0] + self[1] * rhs[0][1] + self[2] * rhs[0][2] + self[3] * rhs[0][3],
+                self[0] * rhs[1][0] + self[1] * rhs[1][1] + self[2] * rhs[1][2] + self[3] * rhs[1][3],
+                self[0] * rhs[2][0] + self[1] * rhs[2][1] + self[2] * rhs[2][2] + self[3] * rhs[2][3],
+                self[0] * rhs[3][0] + self[1] * rhs[3][1] + self[2] * rhs[3][2] + self[3] * rhs[3][3]
             )
         }
     }
